@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node / filmcraft
+node_modules/
+dist/
+filmcraft/node_modules/
+filmcraft/dist/
+
+# Large video files
+*.mp4
+
+# IDE
+.vscode/
+.idea/
+.trae/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
