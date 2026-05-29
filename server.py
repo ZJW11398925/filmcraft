@@ -6,14 +6,13 @@ import urllib.error
 import os
 
 PORT = 8080
-COZE_API_BASE = "https://api.coze.cn"
-COZE_TOKEN = "pat_rXffEzsFW6w9wTJbgIGNVyi1qHJaj4qPBQDs1ZALLP4iAlRMSfniNpze3yWF6Dck"
+WORKFLOW_BASE = "https://8bgbqk64vy.coze.site"
+WORKFLOW_TOKEN = "pat_rXffEzsFW6w9wTJbgIGNVyi1qHJaj4qPBQDs1ZALLP4iAlRMSfniNpze3yWF6Dck"
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
-        if self.path.startswith("/api/coze/"):
-            coze_path = self.path[len("/api/coze"):]
-            target_url = COZE_API_BASE + coze_path
+        if self.path == "/api/workflow/stream_run":
+            target_url = WORKFLOW_BASE + "/stream_run"
 
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length) if content_length > 0 else b""
@@ -22,8 +21,9 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                 target_url,
                 data=body,
                 headers={
-                    "Authorization": f"Bearer {COZE_TOKEN}",
+                    "Authorization": f"Bearer {WORKFLOW_TOKEN}",
                     "Content-Type": "application/json",
+                    "Accept": "text/event-stream",
                 },
                 method="POST",
             )
@@ -34,15 +34,10 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_header("Access-Control-Allow-Origin", "*")
                     self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
                     self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-                    if self.path.endswith("/v3/chat"):
-                        self.send_header("Content-Type", "text/event-stream")
-                        self.send_header("Cache-Control", "no-cache")
-                        self.send_header("Connection", "keep-alive")
-                        self.send_header("X-Accel-Buffering", "no")
-                    else:
-                        self.send_header("Content-Type", "application/json")
-
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.send_header("Connection", "keep-alive")
+                    self.send_header("X-Accel-Buffering", "no")
                     self.end_headers()
 
                     chunk_size = 4096
@@ -53,11 +48,12 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                         self.wfile.write(chunk)
                         self.wfile.flush()
             except urllib.error.HTTPError as e:
+                error_body = e.read()
                 self.send_response(e.code)
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
-                self.wfile.write(e.read())
+                self.wfile.write(error_body)
         else:
             self.send_response(404)
             self.end_headers()
@@ -78,8 +74,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def log_message(self, format, *args):
-        if "/api/coze/" in str(args):
-            print(f"[API] {args[0]}")
+        if "/api/workflow/" in str(args):
+            print(f"[WF] {args[0]}")
         elif "200" in str(args[1]) or "304" in str(args[1]):
             pass
         else:
@@ -93,7 +89,7 @@ if __name__ == "__main__":
 ╔══════════════════════════════════════════╗
 ║   FilmCraft Server                       ║
 ║   地址: http://localhost:{PORT}              ║
-║   API代理: /api/coze/ -> api.coze.cn     ║
+║   工作流: /api/workflow/stream_run        ║
 ║   按 Ctrl+C 停止                          ║
 ╚══════════════════════════════════════════╝
 """)
